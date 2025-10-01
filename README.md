@@ -2,7 +2,7 @@
 
 <h1><li> Programming a Minimal SoC </h1>
 
-In this chapter, we will revise the minimal SoC we had designed. Our SoC included a \textbf{systolic array} to accelerate matrix multiplication workloads. This SoC was implemented on an <b>Arty 7 FPGA board</b> . In this book, we will see how to program such a system.  
+In this chapter, we will revise the minimal SoC we had designed. Our SoC included a <b>systolic array</b> to accelerate matrix multiplication workloads. This SoC was implemented on an <b>Arty 7 FPGA board</b> . In this book, we will see how to program such a system.  
 
 To program any embedded system, we need a few fundamental things that are common across all systems.  
 
@@ -21,7 +21,7 @@ After the bootloader, if we have an OS, it transfers control to the OS. Otherwis
 
 
 </li>
-
+<!-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -->
 <h1><li>Our Minimal SoC </h1>
 
 Now let's return to our SoC. It consists of:  
@@ -86,5 +86,125 @@ The main program is the user-level application that actually performs the tasks 
 
 </ul>
 
+<!-- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- -->
+<h1><li>Setting Up RISC-V Toolchain</h1>
+
+So, what exactly is a <b>toolchain</b>?  
+
+A toolchain is a collection of tools used for compiling, linking, and loading a program.  
+
+Have you ever used a toolchain before?  
+Think back to your Computer Programming Lab, where you used the <b>gcc</b> compiler for C programming.  
+In fact, GCC itself is a toolchain—it includes a compiler (<b>gcc</b>), a debugger (<b>gdb</b>), and several other utilities.  
+
+A toolchain is always architecture-specific. For example:  
+- If you are using a laptop with an ARM processor (like Apple products), you need a version of the GCC toolchain that supports ARM.  
+- If your laptop has an Intel processor, you need the GCC toolchain built for Intel’s architecture.  
+
+Since we are working with a RISC-V processor, we need the RISC-V GCC toolchain.  
+
+In this chapter, we will learn how to install the RISC-V GCC toolchain.  
+For this, you need a Linux-based operating system such as Ubuntu. Any recent version of Ubuntu will work fine.  
+
+If you are using Windows, you can first install a virtual machine (such as VirtualBox) and run Ubuntu inside it.  
+
+You may also refer to the official GitHub repository for the RISC-V GNU Toolchain at: <a href="https://github.com/riscv-collab/riscv-gnu-toolchain"> GNU Toolchain</a>
+
+if you prefer to set it up manually.  
+
+However, to keep things simple, follow the instructions below.  
+
+---
+
+### Installation Steps (on Ubuntu)
+
+1. Open a terminal and install the required dependencies:  
+
+```bash
+sudo apt update
+sudo apt-get install autoconf automake autotools-dev curl python3 python3-pip python3-tomli \
+libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool \
+patchutils bc zlib1g-dev libexpat-dev ninja-build git cmake libglib2.0-dev libslirp-dev
+```
+
+2. Clone the RISC-V GNU Toolchain repository:  
+
+```bash {copy = true}
+git clone https://github.com/riscv/riscv-gnu-toolchain
+cd riscv-gnu-toolchain
+```
+
+
+
+3. Configure and build the toolchain:  
+```bash
+./configure --prefix=/opt/riscv --with-arch=rv32imc --with-abi=ilp32d
+make
+```
+
+This will install the RISC-V toolchain in your system under <b>/opt/riscv</b>.  
+
+---
+
+### Updating the PATH Variable
+
+To make the RISC-V toolchain accessible system-wide, add it to your PATH:  
+
+```bash
+echo "export PATH=/opt/riscv/bin:$PATH" >> ~/.bashrc
+source ~/.bashrc
+```
+
+---
+
+### Verifying the Installation
+
+Finally, check whether the toolchain is installed correctly:  
+
+```bash
+riscv64-unknown-elf-gcc --version
+```
+
+If you see version details printed, congratulations — the RISC-V GCC toolchain has been successfully installed!  
+
+</li>
+
+
+<h1> <li> Setting up RISC-V Simulator </h1> 
+
+You might be wondering why we need a simulator at all.  
+
+When you compile a C program on your system using the RISC-V toolchain, the output binary will not run on your computer.  
+This is because it is compiled for the RISC-V architecture, not for your laptop’s Intel or ARM processor.  
+
+So, do we need a real RISC-V processor to run it?  
+Yes, ideally we would run it on hardware such as an FPGA board with a RISC-V core loaded on it.  
+
+But what if we don’t have real RISC-V hardware available?  
+In such a situation, we can use a <b>simulator</b> that mimics the behavior of a RISC-V processor and allows us to run our compiled program.  
+
+Now you understand why we need a simulator here.  
+
+There are a number of RISC-V simulators available, and in this chapter we will use <b>Spike</b>, the official RISC-V ISA simulator.  
+
+---
+
+### Installing Spike
+
+Follow the steps below to install Spike on your system:  
+
+```bash
+sudo apt-get install device-tree-compiler libboost-regex-dev libboost-system-dev
+
+git clone https://github.com/riscv-software-src/riscv-isa-sim
+cd riscv-isa-sim
+mkdir build
+cd build
+../configure --prefix=/opt/riscv
+make
+sudo make install
+```
+
+After installation, the <b>spike </b> binary will be available in </b> /opt/riscv/bin </b>.  
 
 </ol>
