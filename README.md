@@ -138,7 +138,9 @@ cd riscv-gnu-toolchain
 
 3. Configure and build the toolchain:  
 ```bash
-./configure --prefix=/opt/riscv --with-arch=rv32imc --with-abi=ilp32d
+sudo mkdir /opt/riscv
+sudo chown -R $USER:$USER /opt/riscv
+./configure --prefix=/opt/riscv --with-arch=rv32imc --with-abi=ilp32
 make
 ```
 
@@ -162,10 +164,40 @@ source ~/.bashrc
 Finally, check whether the toolchain is installed correctly:  
 
 ```bash
-riscv64-unknown-elf-gcc --version
+riscv32-unknown-elf-gcc --version
 ```
 
 If you see version details printed, congratulations — the RISC-V GCC toolchain has been successfully installed!  
+
+
+Now lets compile a program using this. Save this as main.c
+
+```c
+#include<stdio.h>
+
+int main(){
+    printf("Hello, World!");
+    return 0;
+}
+
+```
+
+Compile it with riscv compiler 
+
+```bash
+riscv32-unknown-elf-gcc main.c
+```
+Now if we try to run the compiled program 
+```bash
+./a.out
+```
+```bash
+bash: ./a.out: cannot execute binary file: Exec format error
+```
+We can see here this program is not running and saying there is some format error . This is expected as we compiled our program for riscv system.
+
+So how we will run this , do we need a risc V system
+
 
 </li>
 
