@@ -232,11 +232,37 @@ git clone https://github.com/riscv-software-src/riscv-isa-sim
 cd riscv-isa-sim
 mkdir build
 cd build
-../configure --prefix=/opt/riscv
+../configure --prefix=/opt/riscv --with-target=riscv32-unknown-elf
 make
 sudo make install
 ```
 
 After installation, the <b>spike </b> binary will be available in </b> /opt/riscv/bin </b>.  
+
+Now we also need a proxy kernel. Note that this will be available only in simulation. In a bare metal system, we have to provide our own implementations for all functionalities used.
+
+```bash
+git clone https://github.com/riscv/riscv-pk.git
+cd riscv-pk
+mkdir build
+cd build
+../configure --prefix=/opt/riscv --host=riscv32-unknown-elf --with-arch=rv32imc_zicsr_zifencei
+make -j$(nproc)
+sudo make install
+
+```
+
+Now you can run the program by 
+
+```bash
+riscv32-unknown-elf-gcc main.c
+spike --isa=rv32imc pk a.out
+
+```
+
+```
+Hello, World!
+```
+
 
 </ol>
