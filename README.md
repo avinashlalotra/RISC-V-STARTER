@@ -266,3 +266,217 @@ Hello, World!
 
 
 </ol>
+
+# Programming Each component 
+
+We can distribute the work between firmware and bootloader . Here we don't need a bootloader actually because we have a simple bare metal system so a single program can be used .
+
+## Firmware and Bootloader
+
+Functions need to performed :
+    setup the stack pointer
+    initilize memory with zeros
+
+Now lets write the firmware. 
+we can write it in simple risc v asm
+```asm
+.section .text
+.global _start
+
+_start:
+    # Load stack pointer (Set SP to top of RAM)
+    la sp, _stack_top
+
+    # Call main function
+    call main
+
+    # If main returns, enter infinite loop
+1:  j 1b
+
+```
+
+That "_stack_top" will be defined in the linker script.
+
+So this firmware simply loads the stack pointer without this stack memory won't work . And then it calls the main function . ANd after compoletion of main function . It halts. 
+
+
+
+## Main Program
+
+In order to use our SoC we need set of functions to use the available hardware. this can be done with the help of memory map.
+
+To avoid complexity we will write seprate header file for each hardware  unit.
+And then seperate the implementations also.
+
+
+we have header file uart.h which will define the structure and features of uart module and in uart.c we will implement those features.
+
+
+uart.h
+```C
+#ifndef UART_H
+#define UART_H
+#include <stdint.h>
+/* Uart divisor register */
+#define UART_DIV ((volatile uint32_t *) 0x02000004)
+/* Uart Data I/O Register */
+#define UART_DATA ((volatile uint32_t *) 0x02000008)
+
+/* to set the baud rate 
+** BAUD RATE = CPU_FREQ/div - 1
+*/
+void uart_set_div(unsigned int div);
+
+/* Send a single character vai uart*/
+void uart_putchar(char ch);
+
+/* send a string vai uart */
+void putstr(const char *str);
+#endif 
+
+```
+
+led.h
+```c
+#ifndef LED_H
+#define LED_H
+#include <stdint.h>
+
+/* LED register adress - LSB are connected to leds */
+#define LED_ADDR 0x02000000
+
+/* Turn leds On Off */
+void led_write(uint32_t) ;
+
+#endif
+```
+The Picorv32 Cpu have timers also . So for exact timing we can use that.
+
+
+timer.h
+```C
+#ifndef TIMER_H
+#define TIMER_H
+#include <stdint.h>
+
+#define CPU_FREQ 50000000  // Set your CPU frequency (e.g., 50 MHz)
+
+static inline uint64_t get_mcycle() ;
+
+void delay_ms(uint32_t ms);
+
+#endif
+```
+
+These are only the function signatures or declarations . We need to implelemnt all these functions.
+Here also we will implement functions of uart.h in uart.c and smilarly for all other.
+
+uart.c
+```C
+#include "uart.h"
+
+void uart_set_div(unsigned int div)
+{
+  volatile int delay;
+  *UART_DIV = div;
+  /* Need to delay a little */
+  for (delay = 0; delay < 200; delay++) {}
+}
+
+void uart_putchar(char ch){
+    *UART_DATA = ch ;
+}
+void putstr(const char *str) {
+  while (*str) {
+      uart_putchar(*str++);
+  }
+}
+
+```
+
+led.c
+```C
+#include "led.h"
+void led_write(uint32_t value){
+    volatile uint32_t *led = (volatile uint32_t *)LED_ADDR;
+    *led = value ;
+}
+```
+
+timer.c
+```C
+#include "timer.h"
+static inline uint64_t get_mcycle() {
+    uint64_t cycle;
+    asm volatile ("rdcycle %0" : "=r" (cycle));
+    return cycle;
+}
+
+void delay_ms(uint32_t ms) {
+    uint64_t start = get_mcycle();
+    uint64_t end = start + ((uint64_t)ms * (CPU_FREQ / 1000));
+
+    while (get_mcycle() < end);
+}
+```
+
+Now we can use all these hardware units with the help of these header files.
+
+Now lets write a hello world program. that will work on our SoC
+
+main.c
+```C
+#include "uart.h"
+
+int main() {
+
+
+    putstr("Hello, World!");
+
+    return 0;
+}
+```
+
+
+### TESTED TILL HERE IGONRE BELOW
+
+this putstr function will send our text to a screen which is connected vai uart.
+we can connect to the FPGA board vai uart. We have already connected to that board.
+
+It have two ports dev/ttyUSB0 -> JTAG used for programming FPGA
+                dev//ttyUSB1  -> UART-to-USB Bridge  that will be used for uart connection
+
+So after compilation and uploading that programming to FPGA. on reset it will display 
+
+```text
+Hello, World!
+```
+On our laptop screen.
+
+# Understand the compilation 
+
+
+in order to compile our main.c . we should provide the correspong header file implementations also.
+
+so we have to do
+
+```bash
+riscv-gcc main.c uart.c -o hello
+```
+
+It will produce the required file hello. 
+
+Now this hello file is in ELF format and can be only executed on a risc V platform.
+
+We have to upload the binary represenation of this programm to our RaM and then execute this program .
+
+So do you remeber what our firmware was doing 
+
+it was setting stack pointer and then calling main function . So it means
+
+we have to combine our main program with that firmware and then upload it to memory . and then on reset this programm will execute .
+
+
+## ELF format and the need for a linker script
+
+
